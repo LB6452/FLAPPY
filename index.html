@@ -1,133 +1,315 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <title>Flappy Bird Deluxe</title>
-  <style>
+<meta charset="UTF-8" />
+<title>Flappy Bird Levels</title>
+<style>
+
     html, body {
-      margin: 0;
-      padding: 0;
+
+      margin: 0; padding: 0;
+
       font-family: Arial, sans-serif;
+
       background: #87CEEB;
+
       overflow: hidden;
+
     }
+
     canvas {
+
       display: block;
+
       margin: 20px auto;
-      background: linear-gradient(to bottom, #87CEEB 70%, #ded895 100%);
+
+      background: #aee0f4;
+
       border: 3px solid #000;
+
     }
+
     .screen {
+
       position: absolute;
+
       top: 0; left: 0;
+
       width: 100%; height: 100%;
+
       background: rgba(0,0,0,0.5);
+
       display: flex;
+
       flex-direction: column;
+
       align-items: center;
+
       justify-content: center;
+
       z-index: 10;
+
     }
-    input, select, button {
+
+    select, input, button {
+
       font-size: 18px;
+
       padding: 10px;
+
       margin: 8px;
+
       border-radius: 8px;
+
       border: none;
+
     }
+
     .btn {
-      background: linear-gradient(to bottom, orange, darkorange);
+
+      background: orange;
+
       color: white;
+
       box-shadow: 0 4px #994d00;
-      transition: transform 0.2s ease;
+
+      transition: transform 0.2s;
+
       cursor: pointer;
+
     }
+
     .btn:hover {
+
       transform: scale(1.05);
+
     }
-    #infoBar {
-      text-align: center;
-      font-weight: bold;
-      font-size: 16px;
-      margin: 8px;
-    }
-    #leaderboard {
-      background: rgba(255,255,255,0.9);
-      padding: 10px 20px;
-      border-radius: 10px;
-      max-height: 200px;
-      overflow-y: auto;
-      font-size: 16px;
-    }
-  </style>
+</style>
 </head>
 <body>
 <div id="startScreen" class="screen">
-  <h1>Flappy Bird Deluxe</h1>
-  <input id="nameInput" placeholder="Dein Name" />
-  <label>Skin:
-    <select id="colorSelect">
-      <option value="yellow">Standard Gelb</option>
-      <option value="red">Rot</option>
-      <option value="blue">Blau</option>
-      <option value="purple">Lila</option>
-    </select>
-  </label>
-  <label>Hintergrund:
-    <select id="bgSelect">
-      <option value="day">Tag</option>
-      <option value="night">Nacht</option>
-      <option value="forest">Wald</option>
-    </select>
-  </label>
-  <button class="btn" id="startBtn">Start</button>
-  <div id="leaderboard"></div>
+<h1>Flappy Bird</h1>
+<input id="nameInput" placeholder="Dein Name" />
+<label>Level:
+<select id="levelSelect">
+<option value="1">Level 1</option>
+<option value="2">Level 2</option>
+<option value="3">Level 3</option>
+<option value="4">Level 4</option>
+<option value="5">Level 5</option>
+</select>
+</label>
+<button class="btn" id="startBtn">Start</button>
+<div id="leaderboard"></div>
 </div>
 <div id="gameOverScreen" class="screen" style="display:none;">
-  <h1>Game Over</h1>
-  <p id="finalScore"></p>
-  <button class="btn" id="backBtn">Zurück zum Hauptmenü</button>
+<h1>Game Over</h1>
+<p id="finalScore"></p>
+<button class="btn" id="backBtn">Zurück</button>
 </div>
 <canvas id="gameCanvas" width="600" height="800"></canvas>
-<div id="infoBar"></div>
 <script>
+
 const canvas = document.getElementById('gameCanvas');
+
 const ctx = canvas.getContext('2d');
-const infoBar = document.getElementById('infoBar');
-let nameInput = document.getElementById("nameInput");
-let colorSelect = document.getElementById("colorSelect");
-let bgSelect = document.getElementById("bgSelect");
-let startScreen = document.getElementById("startScreen");
-let gameOverScreen = document.getElementById("gameOverScreen");
-let finalScoreText = document.getElementById("finalScore");
-let startBtn = document.getElementById("startBtn");
-let backBtn = document.getElementById("backBtn");
-let leaderboardDiv = document.getElementById("leaderboard");let playerName = '', playerColor = 'yellow', bgTheme = 'day'; let gravity = 0.6, jump = -10, gap = 180, speed = 2; let pipes = [], bird = {}, score = 0, frame = 0, gameStarted = false, gameOver = false, paused = false, startTime;
 
-function resetGame() { bird = { x: 100, y: 300, radius: 15, velocity: 0 }; pipes = []; score = 0; frame = 0; gameOver = false; paused = false; startTime = Date.now(); infoBar.textContent = ''; }
+const nameInput = document.getElementById("nameInput");
 
-function drawBackground() { if (bgTheme === 'night') ctx.fillStyle = '#001D3D'; else if (bgTheme === 'forest') ctx.fillStyle = '#2e8b57'; else ctx.fillStyle = '#87CEEB'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+const levelSelect = document.getElementById("levelSelect");
 
-function drawBird() { ctx.save(); ctx.translate(bird.x, bird.y); ctx.rotate(bird.velocity / 10); ctx.fillStyle = playerColor; ctx.beginPath(); ctx.arc(0, 0, bird.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+const startScreen = document.getElementById("startScreen");
 
-function drawPipe(pipe) { ctx.fillStyle = '#228B22'; ctx.fillRect(pipe.x, 0, 60, pipe.top); ctx.fillRect(pipe.x, pipe.top + pipe.gap, 60, canvas.height); }
+const gameOverScreen = document.getElementById("gameOverScreen");
 
-function drawGround() { ctx.fillStyle = '#654321'; ctx.fillRect(0, canvas.height - 50, canvas.width, 50); }
+const finalScoreText = document.getElementById("finalScore");
 
-function updatePipes() { if (frame % 90 === 0) { let top = Math.random() * 300 + 50; pipes.push({ x: canvas.width, top, gap }); } pipes.forEach((pipe, i) => { pipe.x -= speed; if (pipe.x + 60 < 0) pipes.splice(i, 1); if ( bird.x + bird.radius > pipe.x && bird.x - bird.radius < pipe.x + 60 && (bird.y - bird.radius < pipe.top || bird.y + bird.radius > pipe.top + pipe.gap) ) gameOver = true; if (pipe.x + 60 === bird.x) score++; }); }
+const startBtn = document.getElementById("startBtn");
 
-function drawUI() { let level = 1 + Math.floor(score / 5); let seconds = Math.floor((Date.now() - startTime) / 1000); ctx.fillStyle = '#000'; ctx.font = '20px Arial'; ctx.fillText(Punkte: ${score} Level: ${level} Speed: ${speed.toFixed(1)} Zeit: ${seconds}s, 10, 30); }
+const backBtn = document.getElementById("backBtn");
 
-function gameLoop() { if (paused || gameOver) return; drawBackground(); ctx.clearRect(0, 0, canvas.width, canvas.height); drawGround(); updatePipes(); pipes.forEach(drawPipe); drawBird(); drawUI();
+const leaderboardDiv = document.getElementById("leaderboard");
+ 
+let playerName = "", level = 1;
 
-bird.velocity += gravity; bird.y += bird.velocity; if (bird.y + bird.radius > canvas.height - 50 || bird.y - bird.radius < 0) gameOver = true; if (!gameOver) { frame++; requestAnimationFrame(gameLoop); } else { finalScoreText.textContent = Punkte: ${score}; gameOverScreen.style.display = 'flex'; } }
+let gravity = 0.6, jump = -10, gap = 180, speed = 2;
 
-function handleInput(event) { if (event.key === 'p' || event.key === 'P') { paused = !paused; infoBar.textContent = paused ? 'Spiel pausiert. Drücke P zum Fortsetzen' : ''; if (!paused) requestAnimationFrame(gameLoop); return; } if (!gameStarted) return; if (gameOver) { gameOverScreen.style.display = 'none'; resetGame(); requestAnimationFrame(gameLoop); } else bird.velocity = jump; }
+let pipes = [], bird = {}, score = 0, frame = 0, gameStarted = false, gameOver = false;
+ 
+function resetGame() {
 
-document.addEventListener('keydown', handleInput); canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput({ key: '' }); });
+  bird = { x: 100, y: 300, radius: 15, velocity: 0 };
 
-startBtn.onclick = () => { playerName = nameInput.value.trim() || "Unbekannt"; playerColor = colorSelect.value; bgTheme = bgSelect.value; startScreen.style.display = "none"; resetGame(); gameStarted = true; requestAnimationFrame(gameLoop); };
+  pipes = [];
 
-backBtn.onclick = () => { gameOverScreen.style.display = "none"; startScreen.style.display = "flex"; gameStarted = false; infoBar.textContent = ''; }; </script>
+  score = 0;
 
+  frame = 0;
+
+  gameOver = false;
+
+}
+ 
+function applyLevelSettings(lvl) {
+
+  gravity = 0.6 + lvl * 0.05;
+
+  speed = 2 + lvl * 0.3;
+
+  gap = 180 - lvl * 10;
+
+}
+ 
+function drawBird() {
+
+  ctx.save();
+
+  ctx.translate(bird.x, bird.y);
+
+  ctx.rotate(bird.velocity / 10);
+
+  ctx.fillStyle = 'yellow';
+
+  ctx.beginPath();
+
+  ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
+
+  ctx.fill();
+
+  ctx.restore();
+
+}
+ 
+function drawPipe(pipe) {
+
+  ctx.fillStyle = '#228B22';
+
+  ctx.fillRect(pipe.x, 0, 60, pipe.top);
+
+  ctx.fillRect(pipe.x, pipe.top + pipe.gap, 60, canvas.height);
+
+}
+ 
+function updatePipes() {
+
+  if (frame % 90 === 0) {
+
+    let top = Math.random() * 300 + 50;
+
+    pipes.push({ x: canvas.width, top, gap });
+
+  }
+
+  pipes.forEach((pipe, i) => {
+
+    pipe.x -= speed;
+
+    if (pipe.x + 60 < 0) pipes.splice(i, 1);
+
+    if (
+
+      bird.x + bird.radius > pipe.x &&
+
+      bird.x - bird.radius < pipe.x + 60 &&
+
+      (bird.y - bird.radius < pipe.top || bird.y + bird.radius > pipe.top + pipe.gap)
+
+    ) gameOver = true;
+
+    if (pipe.x + 60 === bird.x) score++;
+
+  });
+
+}
+ 
+function drawUI() {
+
+  ctx.fillStyle = '#000';
+
+  ctx.font = '20px Arial';
+
+  ctx.fillText(`Level: ${level} | Punkte: ${score}`, 10, 30);
+
+}
+ 
+function gameLoop() {
+
+  if (gameOver) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#87CEEB';
+
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#654321';
+
+  ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+
+  updatePipes();
+
+  pipes.forEach(drawPipe);
+
+  drawBird();
+
+  drawUI();
+ 
+  bird.velocity += gravity;
+
+  bird.y += bird.velocity;
+
+  if (bird.y + bird.radius > canvas.height - 50 || bird.y - bird.radius < 0) gameOver = true;
+
+  if (!gameOver) {
+
+    frame++;
+
+    requestAnimationFrame(gameLoop);
+
+  } else {
+
+    let key = `level_score_${level}`;
+
+    let best = sessionStorage.getItem(key) || 0;
+
+    if (score > best) sessionStorage.setItem(key, score);
+
+    finalScoreText.textContent = `Punkte: ${score} (Best: ${Math.max(score, best)})`;
+
+    gameOverScreen.style.display = 'flex';
+
+  }
+
+}
+ 
+startBtn.onclick = () => {
+
+  playerName = nameInput.value.trim() || "Spieler";
+
+  level = parseInt(levelSelect.value);
+
+  applyLevelSettings(level);
+
+  resetGame();
+
+  startScreen.style.display = 'none';
+
+  gameStarted = true;
+
+  requestAnimationFrame(gameLoop);
+
+};
+ 
+backBtn.onclick = () => {
+
+  gameOverScreen.style.display = 'none';
+
+  startScreen.style.display = 'flex';
+
+  gameStarted = false;
+
+};
+</script>
 </body>
 </html>
+ 
