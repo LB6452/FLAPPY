@@ -67,20 +67,19 @@
   <label>Skin:
     <select id="colorSelect">
       <option value="yellow">Standard Gelb</option>
-      <option value="red">Rot (10 Punkte)</option>
-      <option value="blue">Blau (25 Punkte)</option>
-      <option value="purple">Lila (50 Punkte)</option>
+      <option value="red">Rot</option>
+      <option value="blue">Blau</option>
+      <option value="purple">Lila</option>
     </select>
   </label>
   <label>Hintergrund:
     <select id="bgSelect">
       <option value="day">Tag</option>
-      <option value="night">Nacht (20 Punkte)</option>
-      <option value="forest">Wald (40 Punkte)</option>
+      <option value="night">Nacht</option>
+      <option value="forest">Wald</option>
     </select>
   </label>
   <button class="btn" id="startBtn">Start</button>
-  <button class="btn" id="clearBtn">Bestenliste löschen</button>
   <div id="leaderboard"></div>
 </div>
 <div id="gameOverScreen" class="screen" style="display:none;">
@@ -102,7 +101,6 @@ let gameOverScreen = document.getElementById("gameOverScreen");
 let finalScoreText = document.getElementById("finalScore");
 let startBtn = document.getElementById("startBtn");
 let backBtn = document.getElementById("backBtn");
-let clearBtn = document.getElementById("clearBtn");
 let leaderboardDiv = document.getElementById("leaderboard");let playerName = '', playerColor = 'yellow', bgTheme = 'day'; let gravity = 0.6, jump = -10, gap = 180, speed = 2; let pipes = [], bird = {}, score = 0, frame = 0, gameStarted = false, gameOver = false, paused = false, startTime;
 
 function resetGame() { bird = { x: 100, y: 300, radius: 15, velocity: 0 }; pipes = []; score = 0; frame = 0; gameOver = false; paused = false; startTime = Date.now(); infoBar.textContent = ''; }
@@ -121,27 +119,15 @@ function drawUI() { let level = 1 + Math.floor(score / 5); let seconds = Math.fl
 
 function gameLoop() { if (paused || gameOver) return; drawBackground(); ctx.clearRect(0, 0, canvas.width, canvas.height); drawGround(); updatePipes(); pipes.forEach(drawPipe); drawBird(); drawUI();
 
-bird.velocity += gravity; bird.y += bird.velocity; if (bird.y + bird.radius > canvas.height - 50 || bird.y - bird.radius < 0) gameOver = true; if (!gameOver) { frame++; requestAnimationFrame(gameLoop); } else { saveScore(playerName, score); finalScoreText.textContent = Punkte: ${score}; gameOverScreen.style.display = 'flex'; loadLeaderboard(); } }
+bird.velocity += gravity; bird.y += bird.velocity; if (bird.y + bird.radius > canvas.height - 50 || bird.y - bird.radius < 0) gameOver = true; if (!gameOver) { frame++; requestAnimationFrame(gameLoop); } else { finalScoreText.textContent = Punkte: ${score}; gameOverScreen.style.display = 'flex'; } }
 
 function handleInput(event) { if (event.key === 'p' || event.key === 'P') { paused = !paused; infoBar.textContent = paused ? 'Spiel pausiert. Drücke P zum Fortsetzen' : ''; if (!paused) requestAnimationFrame(gameLoop); return; } if (!gameStarted) return; if (gameOver) { gameOverScreen.style.display = 'none'; resetGame(); requestAnimationFrame(gameLoop); } else bird.velocity = jump; }
 
 document.addEventListener('keydown', handleInput); canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput({ key: '' }); });
 
-startBtn.onclick = () => { playerName = nameInput.value.trim() || "Unbekannt"; playerColor = colorSelect.value; bgTheme = bgSelect.value;
+startBtn.onclick = () => { playerName = nameInput.value.trim() || "Unbekannt"; playerColor = colorSelect.value; bgTheme = bgSelect.value; startScreen.style.display = "none"; resetGame(); gameStarted = true; requestAnimationFrame(gameLoop); };
 
-// Skin freischaltung if ((playerColor === 'red' && score < 10) || (playerColor === 'blue' && score < 25) || (playerColor === 'purple' && score < 50)) { alert("Skin noch nicht freigeschaltet! Wähle eine verfügbare Farbe."); return; } if ((bgTheme === 'night' && score < 20) || (bgTheme === 'forest' && score < 40)) { alert("Hintergrund noch nicht freigeschaltet!"); return; }
-
-startScreen.style.display = "none"; resetGame(); gameStarted = true; requestAnimationFrame(gameLoop); };
-
-backBtn.onclick = () => { gameOverScreen.style.display = "none"; startScreen.style.display = "flex"; gameStarted = false; infoBar.textContent = ''; };
-
-clearBtn.onclick = () => { localStorage.removeItem("flappy_leaderboard"); loadLeaderboard(); };
-
-function saveScore(name, score) { let scores = JSON.parse(localStorage.getItem("flappy_leaderboard")) || []; scores.push({ name, score }); localStorage.setItem("flappy_leaderboard", JSON.stringify(scores)); }
-
-function loadLeaderboard() { let scores = JSON.parse(localStorage.getItem("flappy_leaderboard")) || []; scores.sort((a, b) => b.score - a.score); leaderboardDiv.innerHTML = "<h3>Bestenliste</h3>"; scores.forEach((entry, i) => { leaderboardDiv.innerHTML += ${i + 1}. ${entry.name}: ${entry.score}<br>; }); if (scores.length === 0) leaderboardDiv.innerHTML += "Noch keine Einträge."; }
-
-loadLeaderboard(); </script>
+backBtn.onclick = () => { gameOverScreen.style.display = "none"; startScreen.style.display = "flex"; gameStarted = false; infoBar.textContent = ''; }; </script>
 
 </body>
 </html>
