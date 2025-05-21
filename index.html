@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Bird mit Bestenliste</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #87CEEB;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: linear-gradient(to bottom, #87CEEB 70%, #ded895 100%);
+      border: 3px solid #000;
+    }
+    #startScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #startScreen h1 {
+      color: yellow;
+      font-size: 48px;
+      text-shadow: 2px 2px #000;
+      margin-bottom: 10px;
+    }
+    #nameInput {
+      padding: 10px;
+      font-size: 18px;
+      margin: 10px;
+      border-radius: 5px;
+      border: none;
+    }
+    #startBtn {
+      padding: 12px 30px;
+      font-size: 22px;
+      background: orange;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    #leaderboard {
+      background: rgba(255,255,255,0.9);
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-align: center;
+      color: black;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <h1>Flappy Bird</h1>
+    <input type="text" id="nameInput" placeholder="Dein Name eingeben" />
+    <button id="startBtn">Spiel starten</button>
+    <div id="leaderboard"></div>
+  </div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startScreen = document.getElementById('startScreen');
+    const startBtn = document.getElementById('startBtn');
+    const nameInput = document.getElementById('nameInput');
+    const leaderboardDiv = document.getElementById('leaderboard');
+
+    let playerName = '';
+    let bird = { x: 80, y: 200, radius: 15, velocity: 0 };
+    let gravity = 0.6, jump = -10;
+    let pipes = [], frame = 0, score = 0, speed = 2;
+    let gameStarted = false, gameOver = false;
+
+    function loadLeaderboard() {
+      let scores = JSON.parse(localStorage.getItem("flappy_leaderboard")) || [];
+      scores.sort((a, b) => b.score - a.score);
+      const top = scores.slice(0, 3);
+
+      leaderboardDiv.innerHTML = "<h3>Top 3 Spieler</h3>";
+      if (top.length === 0) leaderboardDiv.innerHTML += "Noch keine Einträge.";
+      else {
+        top.forEach((entry, i) => {
+          leaderboardDiv.innerHTML += `${i+1}. ${entry.name}: ${entry.score}<br>`;
+        });
+      }
+    }
+
+    function saveScore(name, score) {
+      let scores = JSON.parse(localStorage.getItem("flappy_leaderboard")) || [];
+      scores.push({ name, score });
+      localStorage.setItem("flappy_leaderboard", JSON.stringify(scores));
+    }
+
+    function resetGame() {
+      bird.y = 200;
+      bird.velocity = 0;
+      pipes = [];
+      frame = 0;
+      score = 0;
+      speed = 2;
+      gameOver = false;
+    }
+
+    function drawBird() {
+      ctx.save();
+      ctx.translate(bird.x, bird.y);
+      ctx.rotate(bird.velocity / 10);
+      ctx.fillStyle = 'yellow';
+      ctx.beginPath();
+      ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'orange';
+      ctx.beginPath();
+      ctx.ellipse(-5, 0, 6, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPipe(pipe) {
+      ctx.fillStyle = '#228B22';
+      ctx.fillRect(pipe.x, 0, 50, pipe.top);
+      ctx.fillRect(pipe.x, pipe.top + pipe.gap, 50, canvas.height);
+    }
+
+    function drawScore() {
+      ctx.fillStyle = '#000';
+      ctx.font = '20px Arial';
+      ctx.fillText("Punkte: " + score, 10, 30);
+    }
+
+    function drawGround() {
+      ctx.fillStyle = '#654321';
+      ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+    }
+
+    function drawGameOver() {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      ctx.font = '36px Arial';
+      ctx.fillText("Game Over", 120, 260);
+      ctx.font = '24px Arial';
+      ctx.fillText("Punkte: " + score, 150, 300);
+      ctx.fillText("Drücke Taste oder tippe", 80, 350);
+    }
+
+    function updatePipes() {
+      if (frame % 90 === 0) {
+        let top = Math.random() * 200 + 50;
+        pipes.push({ x: canvas.width, top: top, gap: 130 });
+      }
+
+      pipes.forEach((pipe, i) => {
+        pipe.x -= speed;
+        if (pipe.x + 50 < 0) {
+          pipes.splice(i, 1);
+          score++;
+          if (score % 5 === 0) speed += 0.3;
+        }
+
+        if (
+          bird.x + bird.radius > pipe.x &&
+          bird.x - bird.radius < pipe.x + 50 &&
+          (bird.y - bird.radius < pipe.top || bird.y + bird.radius > pipe.top + pipe.gap)
+        ) {
+          gameOver = true;
+        }
+      });
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawGround();
+      updatePipes();
+      pipes.forEach(drawPipe);
+      drawBird();
+      drawScore();
+
+      bird.velocity += gravity;
+      bird.y += bird.velocity;
+
+      if (bird.y + bird.radius > canvas.height - 40 || bird.y - bird.radius < 0) {
+        gameOver = true;
+      }
+
+      if (!gameOver) {
+        frame++;
+        requestAnimationFrame(gameLoop);
+      } else {
+        drawGameOver();
+        saveScore(playerName || "Unbekannt", score);
+        loadLeaderboard();
+      }
+    }
+
+    function handleInput() {
+      if (!gameStarted) return;
+      if (gameOver) {
+        resetGame();
+        requestAnimationFrame(gameLoop);
+      } else {
+        bird.velocity = jump;
+      }
+    }
+
+    document.addEventListener('keydown', handleInput);
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleInput();
+    });
+
+    startBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      playerName = name || "Unbekannt";
+      startScreen.style.display = "none";
+      gameStarted = true;
+      resetGame();
+      requestAnimationFrame(gameLoop);
+    });
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>
